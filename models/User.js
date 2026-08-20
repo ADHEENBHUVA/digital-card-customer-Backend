@@ -66,7 +66,14 @@ const UserSchema = new mongoose.Schema({
     views: {
         landingPage: { type: Number, default: 0 },
         digitalCard: { type: Number, default: 0 }
-    }
+    },
+    dailyViews: [
+        {
+            date: String,
+            digitalCard: { type: Number, default: 0 },
+            landingPage: { type: Number, default: 0 }
+        }
+    ]
 }, { timestamps: true });
 
 UserSchema.index({ username: 1 }, { unique: true, partialFilterExpression: { username: { $type: "string" } } });
