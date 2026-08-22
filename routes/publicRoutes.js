@@ -4,6 +4,64 @@ const User = require('../models/User');
 
 const DigitalCard = require('../models/DigitalCard');
 
+// GET /api/public/card/nfc/:token
+router.get('/card/nfc/:token', async (req, res) => {
+    try {
+        const card = await DigitalCard.findOne({ uniqueToken: req.params.token });
+
+        if (!card) {
+            return res.status(404).json({ message: 'Invalid NFC Card.', code: 'INVALID_CARD' });
+        }
+
+        if (!card.nfcEnabled) {
+            return res.status(400).json({ message: 'NFC features are not enabled for this card.', code: 'NFC_DISABLED' });
+        }
+
+        if (!card.isActive) {
+            return res.status(403).json({ message: 'This NFC Card is currently inactive.', code: 'CARD_INACTIVE' });
+        }
+
+        const profile = await User.findOne({ _id: card.ownerId, role: 'SUB_ADMIN', isDeleted: false })
+            .select('-passwordHash -mustChangePassword -usernameLocked');
+
+        if (!profile) {
+            return res.status(404).json({ message: 'Digital Card owner not found or deleted.', code: 'OWNER_NOT_FOUND' });
+        }
+
+        // --- ONLY TRACK IF NOT IN PREVIEW MODE ---
+        if (req.query.preview !== 'true') {
+            profile.views.landingPage = (profile.views.landingPage || 0) + 1;
+            profile.views.digitalCard = (profile.views.digitalCard || 0) + 1;
+
+            const todayDate = new Date().toISOString().split('T')[0];
+            let todayStat = profile.dailyViews.find(d => d.date === todayDate);
+            if (!todayStat) {
+                todayStat = { date: todayDate, digitalCard: 0, landingPage: 0 };
+                profile.dailyViews.push(todayStat);
+                todayStat = profile.dailyViews[profile.dailyViews.length - 1];
+            }
+            todayStat.landingPage += 1;
+            todayStat.digitalCard += 1;
+
+            await profile.save();
+        }
+
+        const responseData = card.toObject();
+        responseData.qrCodeUrl = profile.qrCodeUrl;
+        responseData.nfcUrl = profile.nfcUrl;
+
+        res.set({
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        res.json(responseData);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching NFC card data' });
+    }
+});
+
 // GET /api/public/profile/:slug
 router.get('/profile/:slug', async (req, res) => {
     try {
