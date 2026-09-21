@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 
 const DigitalCard = require('../models/DigitalCard');
+const NfcCard = require('../models/NfcCard');
 
 // GET /api/public/card/nfc/:token
 router.get('/card/nfc/:token', async (req, res) => {
@@ -30,6 +31,18 @@ router.get('/card/nfc/:token', async (req, res) => {
 
         // --- ONLY TRACK IF NOT IN PREVIEW MODE ---
         if (req.query.preview !== 'true') {
+            // Individual Physical Card Logic (Sub Admin Written Cards)
+            if (req.query.cid) {
+                const nfcCard = await NfcCard.findOne({ cardId: req.query.cid, subAdminId: profile._id });
+                if (nfcCard) {
+                    if (nfcCard.status === 'Disabled') {
+                        return res.status(403).json({ message: 'This Physical NFC Card has been deactivated.', code: 'CARD_DISABLED' });
+                    }
+                    nfcCard.tapCount = (nfcCard.tapCount || 0) + 1;
+                    await nfcCard.save();
+                }
+            }
+
             profile.views.landingPage = (profile.views.landingPage || 0) + 1;
             profile.views.digitalCard = (profile.views.digitalCard || 0) + 1;
 
