@@ -64,9 +64,7 @@ router.get('/card/nfc/:token', async (req, res) => {
         responseData.nfcUrl = profile.nfcUrl;
 
         res.set({
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=86400'
         });
 
         res.json(responseData);
@@ -151,9 +149,7 @@ router.get('/profile/:slug', async (req, res) => {
         responseData.nfcUrl = profile.nfcUrl;
 
         res.set({
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=86400'
         });
 
         res.json(responseData);
